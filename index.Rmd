@@ -7,24 +7,51 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(spotifyr)
 ```
 
-## R Markdown
+## Introduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What Spotify API parameters most prominently changed in the albums of Tyler, The Creator over time?
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+The natural points of comparison will therefore be the albums of Tyler, the Creator. As said, I expect the earlier albums to show more 'dark' instrumentals with more spoken word. I expect that later albums will show more diverse instrumentals and more singing. I am not quite sure if and how this will exactly translate to the different parameters that Spotify can measure, but this will make the corpus more interesting. Besides that, I am unsure if the trend towards more soul-like and instrumental heavy songs will continue with his last album, CALL ME IF YOU GET LOST, as this also contains more rap and trap-like beats and how this will show up in the data.
 
-```{r cars}
-summary(cars)
+Luckily, the tracks in my corpus are very representative for the groups I want to compare as they all belong to the groups. I will be comparing the tracks in the albums and the groups I want to compare are the albums. It doesn't get very much more representative than that. Luckily, all his albums are on Spotify so no groups are left out. Besides that, I will exclude leaked songs, which are not on Spotify, from my research. The limitations of my corpus is that my observation of his evolution is subjective and might no be represented in the data. However, this would also be an interesting result.
+
+The discography of Tyler do contain some atypical tracks / albums. As I said, CMIFYGL is an outlier in the evolution of his albums in my opinion. Some tracks in the more soul-like, melancholic albums also contain more heavy-beats and can form outliers in the data. Like the hard-hitting "WHAT'S GOOD" on the breakup album IGOR or "I Ain't Got Time!" on the happy Flower Boy. However, these tracks are still more 'fleshed-out' in my opinion than the tracks on the earlier albums. So it will be interesting to see how these outliers influence the final corpus.
+
+## Popularity
+
+The first interesting metric to analyze is valence. This describes the musical positiveness conveyed by a track. This means that high valence songs sound more positive (happy, cheerful, etc) while low valence sound more negative (angry, sad, etc). It will be interesting to see how this metric changes over the albums of Tyler.
+
+```{r popularity, echo=FALSE}
+goblin <- get_playlist_audio_features("", "1xgRIVr1i1rXsscqplnFX0")
+wolf <- get_playlist_audio_features("", "4YVnmY4fEbjVHhbRJoYNe3")
+cb <- get_playlist_audio_features("", "7HsR3skdWjUzb7Lb0bERaj")
+fb <- get_playlist_audio_features("", "14flNZHDdXDJDuDCUdU8CA")
+igor <- get_playlist_audio_features("", "2COQtB8ji1FT7gRz2GhgVH")
+cmifygl <- get_playlist_audio_features("", "6CZM2pQAkID3M3aYzAhc4x")
+
+albums <-
+  bind_rows(
+    goblin %>% mutate(album = "Goblin"),
+    wolf %>% mutate(album = "Wolf"),
+    cb %>% mutate(album = "Cherry Bomb"),
+    fb %>% mutate(album = "Flower Boy"),
+    igor %>% mutate(album = "IGOR"),
+    cmifygl %>% mutate(album = "CMIFYGL"),
+  )
+
+# get year from date min(strtoi(substr(track.album.release_date, 1, 4)))
+
+data_by_album <- albums %>%
+  group_by(album)
+  
+ggplot(data_by_album, aes(x = reorder(album, strtoi(substr(track.album.release_date, 1, 4))), y = valence, fill=album)) +
+  geom_boxplot() +
+  theme(legend.position="none") +
+  labs(title="The evolution of valence over the albums.", x="", y="Valence")
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+We can clearly observe that, when ignoring Wolf, the valence seems to be slightly increasing with each album. Wolf has such a high valence because of the outlier 'Tamale'. This is a song with happy, high energy instrumentals which causes it to have a valence of 0.967. The lyrics however tell a different story. They are very vulgar and do not necessarily have a positive connotation. The album IGOR has a 'song' with a valence of 0 called "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING". This is a very short recording of someone saying "Exactly what you run from, you end up chasing." It does not really have instrumentals beside some chanting. Because this is not really a song, I'm not sure if it should be included in the data. Removing it, however, barely makes a difference. So to conclude, the valence of Tyler seems to be increasing very slightly in recent years.
