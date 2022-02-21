@@ -2,16 +2,20 @@
 title: 'Computational Musicology: Tyler, the Evolution'
 author: "Thierry Blankenstein"
 date: "2/20/2022"
-output: html_document
+output: 
+  flexdashboard::flex_dashboard:
+    storyboard: true
+    theme: united
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(spotifyr)
+library(plotly)
 ```
 
-## Introduction
+### Introduction
 
 Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What Spotify API parameters most prominently changed in the albums of Tyler, The Creator over time?
 
@@ -21,9 +25,7 @@ Luckily, the tracks in my corpus are very representative for the groups I want t
 
 The discography of Tyler do contain some atypical tracks / albums. As I said, CMIFYGL is an outlier in the evolution of his albums in my opinion. Some tracks in the more soul-like, melancholic albums also contain more heavy-beats and can form outliers in the data. Like the hard-hitting "WHAT'S GOOD" on the breakup album IGOR or "I Ain't Got Time!" on the happy Flower Boy. However, these tracks are still more 'fleshed-out' in my opinion than the tracks on the earlier albums. So it will be interesting to see how these outliers influence the final corpus.
 
-## Popularity
-
-The first interesting metric to analyze is valence. This describes the musical positiveness conveyed by a track. This means that high valence songs sound more positive (happy, cheerful, etc) while low valence sound more negative (angry, sad, etc). It will be interesting to see how this metric changes over the albums of Tyler.
+### How did did the valence of the different albums evolve over time?
 
 ```{r popularity, echo=FALSE}
 goblin <- get_playlist_audio_features("", "1xgRIVr1i1rXsscqplnFX0")
@@ -48,10 +50,28 @@ albums <-
 data_by_album <- albums %>%
   group_by(album)
   
-ggplot(data_by_album, aes(x = reorder(album, strtoi(substr(track.album.release_date, 1, 4))), y = valence, fill=album)) +
+valence_plot <- ggplot(data_by_album, aes(x = reorder(album, strtoi(substr(track.album.release_date, 1, 4))), y = valence, fill=album)) +
   geom_boxplot() +
   theme(legend.position="none") +
-  labs(title="The evolution of valence over the albums.", x="", y="Valence")
+  labs(title="The evolution of valence over the albums.", x="", y="Valence") +
+  annotate(
+    "text",
+    x = 2.4, y = 0.967,
+    label = "← Tamale",
+    vjust = 1, size = 3, color = "grey40"
+  ) +
+  annotate(
+    "text",
+    x = 5.6, y = 0,
+    label = "← TEWYRFYEUC",
+    vjust = 1, size = 3, color = "grey40"
+  )
+
+ggplotly(valence_plot)
 ```
+
+***
+
+The first interesting metric to analyze is valence. This describes the musical positiveness conveyed by a track. This means that high valence songs sound more positive (happy, cheerful, etc) while low valence sound more negative (angry, sad, etc). It will be interesting to see how this metric changes over the albums of Tyler.
 
 We can clearly observe that, when ignoring Wolf, the valence seems to be slightly increasing with each album. Wolf has such a high valence because of the outlier 'Tamale'. This is a song with happy, high energy instrumentals which causes it to have a valence of 0.967. The lyrics however tell a different story. They are very vulgar and do not necessarily have a positive connotation. The album IGOR has a 'song' with a valence of 0 called "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING". This is a very short recording of someone saying "Exactly what you run from, you end up chasing." It does not really have instrumentals beside some chanting. Because this is not really a song, I'm not sure if it should be included in the data. Removing it, however, barely makes a difference. So to conclude, the valence of Tyler seems to be increasing very slightly in recent years.
