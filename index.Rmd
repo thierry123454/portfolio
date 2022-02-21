@@ -25,7 +25,7 @@ Luckily, the tracks in my corpus are very representative for the groups I want t
 
 The discography of Tyler do contain some atypical tracks / albums. As I said, CMIFYGL is an outlier in the evolution of his albums in my opinion. Some tracks in the more soul-like, melancholic albums also contain more heavy-beats and can form outliers in the data. Like the hard-hitting "WHAT'S GOOD" on the breakup album IGOR or "I Ain't Got Time!" on the happy Flower Boy. However, these tracks are still more 'fleshed-out' in my opinion than the tracks on the earlier albums. So it will be interesting to see how these outliers influence the final corpus.
 
-### How did did the valence of the different albums evolve over time?
+### How did the average valence of the different albums evolve over time?
 
 ```{r popularity, echo=FALSE}
 goblin <- get_playlist_audio_features("", "1xgRIVr1i1rXsscqplnFX0")
