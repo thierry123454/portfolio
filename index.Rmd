@@ -1,7 +1,7 @@
 ---
 title: 'Computational Musicology: Tyler, the Evolution'
 author: "Thierry Blankenstein"
-date: "2/20/2022"
+date: "2/25/2022"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
@@ -13,11 +13,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(spotifyr)
 library(plotly)
+library(compmus)
+library(gridExtra)
 ```
 
 ### Introduction
 
-Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What Spotify API parameters most prominently changed in the albums of Tyler, The Creator over time?
+Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What parameters most prominently changed in the albums of Tyler, The Creator over time?
 
 The natural points of comparison will therefore be the albums of Tyler, the Creator. As said, I expect the earlier albums to show more 'dark' instrumentals with more spoken word. I expect that later albums will show more diverse instrumentals and more singing. I am not quite sure if and how this will exactly translate to the different parameters that Spotify can measure, but this will make the corpus more interesting. Besides that, I am unsure if the trend towards more soul-like and instrumental heavy songs will continue with his last album, CALL ME IF YOU GET LOST, as this also contains more rap and trap-like beats and how this will show up in the data.
 
@@ -25,9 +27,9 @@ Luckily, the tracks in my corpus are very representative for the groups I want t
 
 The discography of Tyler do contain some atypical tracks / albums. As I said, CMIFYGL is an outlier in the evolution of his albums in my opinion. Some tracks in the more soul-like, melancholic albums also contain more heavy-beats and can form outliers in the data. Like the hard-hitting "WHAT'S GOOD" on the breakup album IGOR or "I Ain't Got Time!" on the happy Flower Boy. However, these tracks are still more 'fleshed-out' in my opinion than the tracks on the earlier albums. So it will be interesting to see how these outliers influence the final corpus.
 
-### How did the average valence of the different albums evolve over time?
+### How did the **valence** of the **different albums** evolve over time?
 
-```{r popularity, echo=FALSE}
+```{r valence, echo=FALSE}
 goblin <- get_playlist_audio_features("", "1xgRIVr1i1rXsscqplnFX0")
 wolf <- get_playlist_audio_features("", "4YVnmY4fEbjVHhbRJoYNe3")
 cb <- get_playlist_audio_features("", "7HsR3skdWjUzb7Lb0bERaj")
@@ -74,4 +76,80 @@ ggplotly(valence_plot)
 
 The first interesting metric to analyze is valence. This describes the musical positiveness conveyed by a track. This means that high valence songs sound more positive (happy, cheerful, etc) while low valence sound more negative (angry, sad, etc). It will be interesting to see how this metric changes over the albums of Tyler.
 
-We can clearly observe that, when ignoring Wolf, the valence seems to be slightly increasing with each album. Wolf has such a high valence because of the outlier 'Tamale'. This is a song with happy, high energy instrumentals which causes it to have a valence of 0.967. The lyrics however tell a different story. They are very vulgar and do not necessarily have a positive connotation. The album IGOR has a 'song' with a valence of 0 called "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING". This is a very short recording of someone saying "Exactly what you run from, you end up chasing." It does not really have instrumentals beside some chanting. Because this is not really a song, I'm not sure if it should be included in the data. Removing it, however, barely makes a difference. So to conclude, the valence of Tyler seems to be increasing very slightly in recent years.
+We can clearly observe that, when ignoring Wolf, the valence seems to be slightly increasing with each album. Wolf has such a high valence because of the outlier 'Tamale'. This is a song with happy, high energy instrumentals which causes it to have a valence of 0.967. The lyrics however tell a different story. They are very vulgar and do not necessarily have a positive connotation. The album IGOR has a 'song' with a valence of 0 called "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING". This is a very short recording of someone saying "Exactly what you run from, you end up chasing." It does not really have instrumentals beside some chanting. Because this is not really a song, I'm not sure if it should be included in the data. Removing it, however, barely makes a difference. So to conclude, the valence of Tyler seems to be increasing significantly in recent years, especially after 'Cherry Bomb'.
+
+### How does an **old** and a **new hit song** of Tyler compare when it comes to **musical variety**?
+```{r chroma, echo=FALSE}
+yonkers <-
+  get_tidy_audio_analysis("3WQlJpaUUbGtUqAskvGA7c") %>%  # 5TxRUOsGeWeRl3xOML59Ai
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+awsf <-
+  get_tidy_audio_analysis("5TxRUOsGeWeRl3xOML59Ai") %>% # 5TxRUOsGeWeRl3xOML59Ai 5hVghJ4KaYES3BFUATCYn0
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+plot1 <- compmus_long_distance(
+  yonkers %>% mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  yonkers %>% mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  feature = pitches,
+  method = "euclidean"
+) %>%
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_equal() +
+  labs(x = "Yonkers", y = "") +
+  theme_minimal() +
+  scale_fill_viridis_c(guide = NULL)
+
+plot2 <- compmus_long_distance(
+  awsf %>% mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  awsf %>% mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  feature = pitches,
+  method = "euclidean"
+) %>%
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_equal() +
+  labs(x = "EARFQUAKE", y = "") +
+  theme_minimal() +
+  scale_fill_viridis_c(guide = NULL)
+
+grid.arrange(plot1, plot2, ncol=2)
+```
+
+***
+
+Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green.
+For this plot, Chebyshev normalization was used, while the distance was calculated using the Euclidean method. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
+
+This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a song released in 2011 which garnered Tyler a lot of attention. It was gritty, controversial and the accompanying music video where Tyler can be seen eating a cockroach, helped its success. It also set the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
+
+This is reflected in the two plots, on the left we notice that the plot for Yonkers shows much repetition indicated by the squares with lower distances. Besides that, there is a certain regularity in its distances as indicated by the horizontal and vertical lines which are equally spaced. On the right, we notice the contrary, there is no such order in its distances with high irregularities around the 100 second mark, this is caused by the guest verse by Playboi Carti. All in all, the plot seems more chaotic.
+
+What we can conclude from this, is that Tyler's songs have become more complex in nature, showing less repetition and overall more variety. If this is the case for all newer songs is not in the scope of this research, however these representative examples do give an indication.
+
+### Conclusion
+From the research done so far, we can definitely say that the overall valence of the albums is increasing over time. Besides that, the musical variety of the songs seems to show the same behavior. This means that, from a computational musicology sense, that Tyler's music is becoming more happier in tone as well as more varied.
+
+For now, what can we say about the future of Tyler's music? If we would simply extrapolate our data, then we could say that the overall valence and musical variety of Tyler's new album would even be higher. However, it is never that simple. Because, at the end of the day, Tyler will simply create whatever he thinks sounds good at the time, which is influenced by factors which we simply can't measure. It could be very much the case that a higher valence and musical variety is not what Tyler is looking for in his next album. However, we can say that with all the experience that Tyler has acquired in his journey that it will definitely be worth listening to.
+
