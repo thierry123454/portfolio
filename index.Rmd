@@ -17,6 +17,95 @@ library(compmus)
 library(gridExtra)
 ```
 
+
+### How does the timbre-based self-similarity matrices compare for an **old** and **new rap song** of Tyler?
+```{r timbre, echo=FALSE}
+smuckers <-
+  get_tidy_audio_analysis("3v6SdZsS8zR6Go257tldbB") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+wusyaname <-
+  get_tidy_audio_analysis("5B0kgjHULYJhAQkK5XsMoC") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+plot1 <- smuckers %>%
+  compmus_self_similarity(timbre, "euclidean") %>% 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "SMUCKERS", y = "")
+
+plot2 <- wusyaname %>%
+  compmus_self_similarity(timbre, "euclidean") %>% 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "WUSYANAME", y = "")
+
+grid.arrange(plot1, plot2, ncol=2)
+```
+
+***
+
+We will now compare two rap songs of Tyler when it comes to the timbre-based self-similarity matrix. To elaborate, timbre is the attribute of sound which causes us to be able to differentiate between two sounds with the same pitch. The matrix used, says something about how points in time compare when it comes to timbre to other points in time within the same song. For this plot, Euclidean normalization was used, while for the summary statistic the root mean square method was used. Just like in the previous plots, a dark shade of blue means that the timbre-based features are more similar than when the color is a lighter shade of green. My hope is that, using this matrix, we can analyse if Tyler uses a more varied arsenal of sounds in his songs. We will therefore look at the rap songs "SMUCKERS", released in 2015, to "WUSYANAME", release in 2021. 
+
+We can immediatly tell from the plot that 4 squares of high similarity form in the "SMUCKERS" subplot. This tells us that within these squares, the song 'sounds' the same. At around the 3 minute mark, the song repeats the basic melody that is played at the beginning of the song with almost no vocals, which explains the vertical and horizontal lines at these times. With "WUSYNAME", there is almost no pattern to be spotted. There are some vague lines which correspond to the moments in the song where the instrumentals are dropped to put focus on a vocal. However, unlike "SMUCKERS", there seems to be no overall pattern.
+
+What we can conclude from this, is that Tyler's songs have gotten more varied when it comes to the use of different sounds. Again, if this is the case for all newer songs is not in the scope of this research, however the hope is that these songs give an indication.
+
+
 ### Introduction
 
 Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What parameters most prominently changed in the albums of Tyler, The Creator over time?
@@ -139,12 +228,11 @@ grid.arrange(plot1, plot2, ncol=2)
 
 ***
 
-Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green.
-For this plot, Chebyshev normalization was used, while the distance was calculated using the Euclidean method. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
+Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green. For this plot, Chebyshev normalization was used, while the distance was calculated using the Euclidean method. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
 
-This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a song released in 2011 which garnered Tyler a lot of attention. It was gritty, controversial and the accompanying music video where Tyler can be seen eating a cockroach, helped its success. It also set the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
+This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a gritty, controversial song released in 2011 which garnered Tyler a lot of attention. Itset the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
 
-This is reflected in the two plots, on the left we notice that the plot for Yonkers shows much repetition indicated by the squares with lower distances. Besides that, there is a certain regularity in its distances as indicated by the horizontal and vertical lines which are equally spaced. On the right, we notice the contrary, there is no such order in its distances with high irregularities around the 100 second mark, this is caused by the guest verse by Playboi Carti. All in all, the plot seems more chaotic.
+This is reflected in the two plots, on the left we notice that the plot for Yonkers shows much repetition indicated by the squares with lower distances. Besides that, there is a certain regularity in its distances as indicated by the horizontal and vertical lines which are equally spaced. On the right, we notice the contrary, there is no such order in its distances with high irregularities around the 100 second mark, this is caused by a guest verse. All in all, the plot seems more chaotic.
 
 What we can conclude from this, is that Tyler's songs have become more complex in nature, showing less repetition and overall more variety. If this is the case for all newer songs is not in the scope of this research, however these representative examples do give an indication.
 
