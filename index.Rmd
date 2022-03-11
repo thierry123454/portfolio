@@ -18,93 +18,44 @@ library(gridExtra)
 ```
 
 
-### How does the timbre-based self-similarity matrices compare for an **old** and **new rap song** of Tyler?
-```{r timbre, echo=FALSE}
-smuckers <-
-  get_tidy_audio_analysis("3v6SdZsS8zR6Go257tldbB") %>% # Change URI.
-  compmus_align(bars, segments) %>%                     # Change `bars`
-  select(bars) %>%                                      #   in all three
-  unnest(bars) %>%                                      #   of these lines.
-  mutate(
-    pitches =
-      map(segments,
-        compmus_summarise, pitches,
-        method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  ) %>%
-  mutate(
-    timbre =
-      map(segments,
-        compmus_summarise, timbre,
-        method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
+### How did the **loudness** of the **different albums** evolve over time?
+
+```{r loudness, echo=FALSE}
+goblin <- get_playlist_audio_features("", "1xgRIVr1i1rXsscqplnFX0")
+wolf <- get_playlist_audio_features("", "4YVnmY4fEbjVHhbRJoYNe3")
+cb <- get_playlist_audio_features("", "7HsR3skdWjUzb7Lb0bERaj")
+fb <- get_playlist_audio_features("", "14flNZHDdXDJDuDCUdU8CA")
+igor <- get_playlist_audio_features("", "2COQtB8ji1FT7gRz2GhgVH")
+cmifygl <- get_playlist_audio_features("", "6CZM2pQAkID3M3aYzAhc4x")
+
+albums <-
+  bind_rows(
+    goblin %>% mutate(album = "Goblin"),
+    wolf %>% mutate(album = "Wolf"),
+    cb %>% mutate(album = "Cherry Bomb"),
+    fb %>% mutate(album = "Flower Boy"),
+    igor %>% mutate(album = "IGOR"),
+    cmifygl %>% mutate(album = "CMIFYGL"),
   )
 
-wusyaname <-
-  get_tidy_audio_analysis("5B0kgjHULYJhAQkK5XsMoC") %>% # Change URI.
-  compmus_align(bars, segments) %>%                     # Change `bars`
-  select(bars) %>%                                      #   in all three
-  unnest(bars) %>%                                      #   of these lines.
-  mutate(
-    pitches =
-      map(segments,
-        compmus_summarise, pitches,
-        method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  ) %>%
-  mutate(
-    timbre =
-      map(segments,
-        compmus_summarise, timbre,
-        method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  )
+data <- albums %>%
+  mutate(date = strtoi(substr(track.album.release_date, 1, 4)))
 
-plot1 <- smuckers %>%
-  compmus_self_similarity(timbre, "euclidean") %>% 
-  ggplot(
-    aes(
-      x = xstart + xduration / 2,
-      width = xduration,
-      y = ystart + yduration / 2,
-      height = yduration,
-      fill = d
-    )
-  ) +
-  geom_tile() +
-  coord_fixed() +
-  scale_fill_viridis_c(guide = "none") +
-  theme_classic() +
-  labs(x = "SMUCKERS", y = "")
+plot <- ggplot(data, aes(x = date, y = loudness, label = track.name)) +
+  geom_smooth() +
+  geom_point(aes(color = album)) +
+  labs(title="The evolution of loudness over the albums.", x="", y="Loudness (dB)")
 
-plot2 <- wusyaname %>%
-  compmus_self_similarity(timbre, "euclidean") %>% 
-  ggplot(
-    aes(
-      x = xstart + xduration / 2,
-      width = xduration,
-      y = ystart + yduration / 2,
-      height = yduration,
-      fill = d
-    )
-  ) +
-  geom_tile() +
-  coord_fixed() +
-  scale_fill_viridis_c(guide = "none") +
-  theme_classic() +
-  labs(x = "WUSYANAME", y = "")
-
-grid.arrange(plot1, plot2, ncol=2)
+ggplotly(plot)
 ```
 
 ***
 
-We will now compare two rap songs of Tyler when it comes to the timbre-based self-similarity matrix. To elaborate, timbre is the attribute of sound which causes us to be able to differentiate between two sounds with the same pitch. The matrix used, says something about how points in time compare when it comes to timbre to other points in time within the same song. For this plot, Euclidean normalization was used, while for the summary statistic the root mean square method was used. Just like in the previous plots, a dark shade of blue means that the timbre-based features are more similar than when the color is a lighter shade of green. My hope is that, using this matrix, we can analyse if Tyler uses a more varied arsenal of sounds in his songs. We will therefore look at the rap songs "SMUCKERS", released in 2015, to "WUSYANAME", release in 2021. 
+Next, we will look at the Spotify API track feature of loudness. It is described as the quality of a sound that is the  correlate of physical strength / amplitude, i.e. the 'power' of a sound. When looking at Tyler's discography, it will be interesting to see how this measure has evolved over the different albums. My hope is to say something about the overall energy that is contained within each album.
 
-We can immediatly tell from the plot that 4 squares of high similarity form in the "SMUCKERS" subplot. This tells us that within these squares, the song 'sounds' the same. At around the 3 minute mark, the song repeats the basic melody that is played at the beginning of the song with almost no vocals, which explains the vertical and horizontal lines at these times. With "WUSYNAME", there is almost no pattern to be spotted. There are some vague lines which correspond to the moments in the song where the instrumentals are dropped to put focus on a vocal. However, unlike "SMUCKERS", there seems to be no overall pattern.
+Looking at the graph, we can conclude that the loudness of the albums over time seems to show a periodic wave-like pattern. With his first album, we can see a very high variance in loudness, with some outliers, and the lowest mean loudness of all albums. We then see an increase in mean loudness until Cherry Bomb, which is not surprising since this album is known for its high energy and hard hitting, rough instrumentals. We then see Tyler taking a step back with Flower Boy, where the spread in loudness as well as the mean seems to be decreasing again. This albums is characterized by instrumentals with a more happy and laid back sound, so this decrease is not surprising. It then rises again with IGOR, which has the same low outlier as found in the valence plot. This track is an outlier for the same reason it is an outlier in the valence plot; this track has almost no instrumentals and is just someone saying a certain sentence. With his last album we see Tyler returning to high energy / loud tracks with a mean which is roughly the same as Cherry Bomb. When listening to the album, one can understand why: It has the same hard hitting beats which early-Tyler is known for.
 
-What we can conclude from this, is that Tyler's songs have gotten more varied when it comes to the use of different sounds. Again, if this is the case for all newer songs is not in the scope of this research, however the hope is that these songs give an indication.
-
+Overall, the loudness in Tylers albums seems to be increasing again but shows some periodic behavior. Extrapolating, It would therefore be safe to assume that the next album of Tyler has a high chance of being less loud.
 
 ### Introduction
 
@@ -198,7 +149,8 @@ plot1 <- compmus_long_distance(
   ) +
   geom_tile() +
   coord_equal() +
-  labs(x = "Yonkers", y = "") +
+  ggtitle("Yonkers") +
+  labs(x = "Time (s)", y = "") +
   theme_minimal() +
   scale_fill_viridis_c(guide = NULL)
 
@@ -219,7 +171,8 @@ plot2 <- compmus_long_distance(
   ) +
   geom_tile() +
   coord_equal() +
-  labs(x = "EARFQUAKE", y = "") +
+  ggtitle("EARFQUAKE") +
+  labs(x = "Time (s)", y = "") +
   theme_minimal() +
   scale_fill_viridis_c(guide = NULL)
 
@@ -228,7 +181,7 @@ grid.arrange(plot1, plot2, ncol=2)
 
 ***
 
-Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green. For this plot, Chebyshev normalization was used, while the distance was calculated using the Euclidean method. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
+Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
 
 This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a gritty, controversial song released in 2011 which garnered Tyler a lot of attention. Itset the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
 
@@ -236,8 +189,98 @@ This is reflected in the two plots, on the left we notice that the plot for Yonk
 
 What we can conclude from this, is that Tyler's songs have become more complex in nature, showing less repetition and overall more variety. If this is the case for all newer songs is not in the scope of this research, however these representative examples do give an indication.
 
+
+### How does the timbre-based self-similarity matrices compare for an **old** and **new rap song** of Tyler?
+```{r timbre, echo=FALSE}
+smuckers <-
+  get_tidy_audio_analysis("3v6SdZsS8zR6Go257tldbB") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+wusyaname <-
+  get_tidy_audio_analysis("5B0kgjHULYJhAQkK5XsMoC") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+plot1 <- smuckers %>%
+  compmus_self_similarity(timbre, "euclidean") %>% 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  ggtitle("SMUCKERS") +
+  labs(x = "Time (s)", y = "")
+
+plot2 <- wusyaname %>%
+  compmus_self_similarity(timbre, "euclidean") %>% 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  ggtitle("WUSYANAME") +
+  labs(x = "Time (s)", y = "")
+
+grid.arrange(plot1, plot2, ncol=2)
+```
+
+***
+
+We will now compare two rap songs of Tyler when it comes to the timbre-based self-similarity matrix. To elaborate, timbre is the attribute of sound which causes us to be able to differentiate between two sounds with the same pitch. The matrix used, says something about how points in time compare when it comes to timbre to other points in time within the same song. Just like in the previous plots, a dark shade of blue means that the timbre-based features are more similar than when the color is a lighter shade of green. My hope is that, using this matrix, we can analyse if Tyler uses a more varied arsenal of sounds in his songs. We will therefore look at the rap songs "SMUCKERS", released in 2015, to "WUSYANAME", release in 2021. 
+
+We can immediately tell from the plot that 4 squares of high similarity form in the "SMUCKERS" subplot. This tells us that within these squares, the song 'sounds' the same. At around the 3 minute mark, the song repeats the basic melody that is played at the beginning of the song with almost no vocals, which explains the vertical and horizontal lines at these times. With "WUSYNAME", there is almost no pattern to be spotted. There are some vague lines which correspond to the moments in the song where the instrumentals are dropped to put focus on a vocal. However, unlike "SMUCKERS", there seems to be no overall pattern.
+
+What we can conclude from this, is that Tyler's songs have gotten more varied when it comes to the use of different sounds. Again, if this is the case for all newer songs is not in the scope of this research, however the hope is that these songs give an indication.
+
+
 ### Conclusion
 From the research done so far, we can definitely say that the overall valence of the albums is increasing over time. Besides that, the musical variety of the songs seems to show the same behavior. This means that, from a computational musicology sense, that Tyler's music is becoming more happier in tone as well as more varied.
 
 For now, what can we say about the future of Tyler's music? If we would simply extrapolate our data, then we could say that the overall valence and musical variety of Tyler's new album would even be higher. However, it is never that simple. Because, at the end of the day, Tyler will simply create whatever he thinks sounds good at the time, which is influenced by factors which we simply can't measure. It could be very much the case that a higher valence and musical variety is not what Tyler is looking for in his next album. However, we can say that with all the experience that Tyler has acquired in his journey that it will definitely be worth listening to.
-
