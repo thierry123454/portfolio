@@ -15,6 +15,26 @@ library(spotifyr)
 library(plotly)
 library(compmus)
 library(gridExtra)
+library(tidymodels)
+library(ggdendro)
+library(heatmaply)
+library(ape)
+
+get_conf_mat <- function(fit) {
+  outcome <- .get_tune_outcome_names(fit)
+  fit %>% 
+    collect_predictions() %>% 
+    conf_mat(truth = outcome, estimate = .pred_class)
+}  
+
+get_pr <- function(fit) {
+  fit %>% 
+    conf_mat_resampled() %>% 
+    group_by(Prediction) %>% mutate(precision = Freq / sum(Freq)) %>% 
+    group_by(Truth) %>% mutate(recall = Freq / sum(Freq)) %>% 
+    ungroup() %>% filter(Prediction == Truth) %>% 
+    select(class = Prediction, precision, recall)
+}
 
 goblin <- get_playlist_audio_features("", "1xgRIVr1i1rXsscqplnFX0")
 wolf <- get_playlist_audio_features("", "4YVnmY4fEbjVHhbRJoYNe3")
@@ -24,47 +44,75 @@ igor <- get_playlist_audio_features("", "2COQtB8ji1FT7gRz2GhgVH")
 cmifygl <- get_playlist_audio_features("", "6CZM2pQAkID3M3aYzAhc4x")
 ```
 
-### How did the **tempo distributions** of the albums **change**?
+### Which **features** result in the succesful **clustering** of the albums **IGOR** and **Goblin**? 
 
-```{r tempi, echo=FALSE}
-albums <-
-  bind_rows(
-    goblin %>% mutate(album = "Goblin"),
-    wolf %>% mutate(album = "Wolf"),
-    cb %>% mutate(album = "Cherry Bomb"),
-    fb %>% mutate(album = "Flower Boy"),
-    igor %>% mutate(album = "IGOR"),
-    cmifygl %>% mutate(album = "CMIFYGL"),
-  )
+```{r cluster, echo=FALSE}
+total <-
+  get_playlist_audio_features("bnfcollection", "4eTwQdG9Xi7RFBl6fAhkci") %>%
+  add_audio_analysis() %>%
+  mutate(
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  ) %>%
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) %>%
+  mutate_at(vars(pitches, timbre), map, bind_rows) %>%
+  unnest(cols = c(pitches, timbre))
 
-# get year from date min(strtoi(substr(track.album.release_date, 1, 4)))
+total_juice <-
+  recipe(
+    track.name ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      valence +
+      tempo +
+      duration +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = total
+  ) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors()) %>% 
+  # step_range(all_predictors()) %>% 
+  prep(total %>% mutate(track.name = str_trunc(track.name, 20))) %>%
+  juice() %>%
+  column_to_rownames("track.name")
 
-data_by_time <- albums %>%
-  arrange(strtoi(substr(track.album.release_date, 1, 4)))
+total_dist <- dist(total_juice, method = "euclidean")
 
-neworder <- c("Goblin", "Wolf", "Cherry Bomb", "Flower Boy", "IGOR", "CMIFYGL")
+final <-  total_dist %>% 
+  hclust(method = "complete") # Try single, average, and complete.
 
-library(plyr)  ## or dplyr (transform -> mutate)
-new_data <- arrange(transform(data_by_time,
-             album=factor(album,levels=neworder)),album)
 
-tempo <- ggplot(new_data, aes(x = tempo, color = album)) +
-  geom_histogram(bins = 20) +
-  theme_classic() +
-  theme(legend.position="none") +
-  labs(title="The evolution of the tempo distribution over the albums.", x="Tempo (BPM)", y="Count") +
-  facet_wrap(~ album)
 
-ggplotly(tempo)
+colors = c("purple", "black")
+clus4 = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,2, 2,2, 2,2, 2,2, 2)
+plot(as.phylo(final), type = "fan", tip.color = colors[clus4],
+     label.offset = 0.5, cex = 0.5)
+
 ```
 
 ***
 
-Having discussed valence, chroma, timbre and loudness, a logical variable to discuss next is tempo. For this, we will look at the different histograms of tempi for each album. In this plot, we can see how many songs fall within a certain tempo range for each album. With this plot we will try to answer the question: In what way did the distribution of tempi change over the different albums?
+An interesting question within music is always: What causes certain songs on a album to be a apart of that album? What is the coherence of tracks within an album? I tried to analyze this for the albums of IGOR and Goblin, two very conflicting albums on all fronts. I found it interesting to investigate whether the coherence within these albums and the difference between the tracks of differing albums would be great enough so that two separate clusters would form. To investigate this, I created a dendrogram which uses the track level features of timbre, danceability, energy, loudness, speechiness, acousticness, instrumentalness, valence, tempo and duration to see if these clusters would form. The result can be seen on the left with tracks from IGOR shown in black and tracks from Goblin shown in pink.
 
-From the plot, we can immediately tell that Tyler had a preference to make songs with a tempo of around 80 BPM. However, this preference seems to have disappeared for his latest album, with most songs being around 138 BPM. Also, the strength of this preference has decreased over time with less songs falling within the largest bin. Besides that, we can see that the tempo of the songs on the first four albums of Tyler seem to be more clustered. Again, this disappeared with his latest two albums, where we can see that the tempi are more spread out.
+Interestingly, we do notice that most of the tracks from Goblin are indeed in the same cluster, with the same holding true for the tracks of IGOR. We do notice some outliers: Some tracks of Goblin are deeply rooted in the IGOR cluster, and the, at this point all to familiar, track "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING" residing in its entirely own cluster. Listening to the Goblin tracks that appear in the IGOR cluster, it is not entirely clear why these appear there: They are very repetitive which is in contrast with most tracks in IGOR. Maybe repetitiveness is not picked up by these track-level features. Besides that, it is not surprising that the aforementioned track resides in its own cluster. This reason for this, is the same reason that its an outlier in many other plots: It is very short, with almost no instrumentals. 
 
-We can, therefore, conclude that the tempo distribution seem to have changed in the sense that it seems to be getting less clustered over time with a less 'central' preference. The reason for this could be that as Tyler got more comfortable making instrumentals, he started experimenting more and more with different tempi. I expect, that for Tyler's next album he will also use a diverse set of tempi as Tyler has been seeing a lot of success with his latest few albums, which coincidentally, have a diverse set of tempi.
+All in all, these features used lead to quite successful clustering of the two albums which means they form their own seperate entities. I suspect that this also applies for different pairs of albums and that all albums of Tyler form entities of their own, that can be successfully distinguished using track-level features. Unfortunately, we can not conclude this with certainty as this experiment does not really have external validity. It does given an indication though.
+
 
 ### Introduction
 
@@ -108,7 +156,7 @@ valence_plot <- ggplot(data_by_album, aes(x = reorder(album, strtoi(substr(track
   annotate(
     "text",
     x = 5.6, y = 0,
-    label = "← TEWYRFYEUC",
+    label = "← EWYRFYEUC",
     vjust = 1, size = 3, color = "grey40"
   )
 
@@ -314,6 +362,48 @@ Next, we will look at the Spotify API track feature of loudness. It is described
 Looking at the graph, we can conclude that the loudness of the albums over time seems to show a periodic wave-like pattern. With his first album, we can see a very high variance in loudness, with some outliers, and the lowest mean loudness of all albums. We then see an increase in mean loudness until Cherry Bomb, which is not surprising since this album is known for its high energy and hard hitting, rough instrumentals. We then see Tyler taking a step back with Flower Boy, where the spread in loudness as well as the mean seems to be decreasing again. This albums is characterized by instrumentals with a more happy and laid back sound, so this decrease is not surprising. It then rises again with IGOR, which has the same low outlier as found in the valence plot. This track is an outlier for the same reason it is an outlier in the valence plot; this track has almost no instrumentals and is just someone saying a certain sentence. With his last album we see Tyler returning to high energy / loud tracks with a mean which is roughly the same as Cherry Bomb. When listening to the album, one can understand why: It has the same hard hitting beats which early-Tyler is known for.
 
 Overall, the loudness in Tylers albums seems to be increasing again but shows some periodic behavior. Extrapolating, It would therefore be safe to assume that the next album of Tyler has a high chance of being less loud.
+
+### How did the **tempo distributions** of the albums **change**?
+
+```{r tempi, echo=FALSE}
+albums <-
+  bind_rows(
+    goblin %>% mutate(album = "Goblin"),
+    wolf %>% mutate(album = "Wolf"),
+    cb %>% mutate(album = "Cherry Bomb"),
+    fb %>% mutate(album = "Flower Boy"),
+    igor %>% mutate(album = "IGOR"),
+    cmifygl %>% mutate(album = "CMIFYGL"),
+  )
+
+# get year from date min(strtoi(substr(track.album.release_date, 1, 4)))
+
+data_by_time <- albums %>%
+  arrange(strtoi(substr(track.album.release_date, 1, 4)))
+
+neworder <- c("Goblin", "Wolf", "Cherry Bomb", "Flower Boy", "IGOR", "CMIFYGL")
+
+library(plyr)  ## or dplyr (transform -> mutate)
+new_data <- arrange(transform(data_by_time,
+             album=factor(album,levels=neworder)),album)
+
+tempo <- ggplot(new_data, aes(x = tempo, color = album)) +
+  geom_histogram(bins = 20) +
+  theme_classic() +
+  theme(legend.position="none") +
+  labs(title="The evolution of the tempo distribution over the albums.", x="Tempo (BPM)", y="Count") +
+  facet_wrap(~ album)
+
+ggplotly(tempo)
+```
+
+***
+
+Having discussed valence, chroma, timbre and loudness, a logical variable to discuss next is tempo. For this, we will look at the different histograms of tempi for each album. In this plot, we can see how many songs fall within a certain tempo range for each album. With this plot we will try to answer the question: In what way did the distribution of tempi change over the different albums?
+
+From the plot, we can immediately tell that Tyler had a preference to make songs with a tempo of around 80 BPM. However, this preference seems to have disappeared for his latest album, with most songs being around 138 BPM. Also, the strength of this preference has decreased over time with less songs falling within the largest bin. Besides that, we can see that the tempo of the songs on the first four albums of Tyler seem to be more clustered. Again, this disappeared with his latest two albums, where we can see that the tempi are more spread out.
+
+We can, therefore, conclude that the tempo distribution seem to have changed in the sense that it seems to be getting less clustered over time with a less 'central' preference. The reason for this could be that as Tyler got more comfortable making instrumentals, he started experimenting more and more with different tempi. I expect, that for Tyler's next album he will also use a diverse set of tempi as Tyler has been seeing a lot of success with his latest few albums, which coincidentally, have a diverse set of tempi.
 
 
 ### Conclusion
