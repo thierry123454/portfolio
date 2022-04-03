@@ -1,7 +1,7 @@
 ---
 title: 'Computational Musicology: Tyler, the Evolution'
 author: "Thierry Blankenstein"
-date: "2/25/2022"
+date: "4/4/2022"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
@@ -44,85 +44,38 @@ igor <- get_playlist_audio_features("", "2COQtB8ji1FT7gRz2GhgVH")
 cmifygl <- get_playlist_audio_features("", "6CZM2pQAkID3M3aYzAhc4x")
 ```
 
-### Which **features** result in the succesful **clustering** of the albums **IGOR** and **Goblin**? 
+### Introduction
+```{r popularity, echo=FALSE}
+albums <-
+  bind_rows(
+    goblin %>% mutate(album = "Goblin"),
+    wolf %>% mutate(album = "Wolf"),
+    cb %>% mutate(album = "Cherry Bomb"),
+    fb %>% mutate(album = "Flower Boy"),
+    igor %>% mutate(album = "IGOR"),
+    cmifygl %>% mutate(album = "CMIFYGL"),
+  )
 
-```{r cluster, echo=FALSE}
-total <-
-  get_playlist_audio_features("bnfcollection", "4eTwQdG9Xi7RFBl6fAhkci") %>%
-  add_audio_analysis() %>%
-  mutate(
-    segments = map2(segments, key, compmus_c_transpose),
-    pitches =
-      map(segments,
-        compmus_summarise, pitches,
-        method = "mean", norm = "manhattan"
-      ),
-    timbre =
-      map(
-        segments,
-        compmus_summarise, timbre,
-        method = "mean"
-      )
-  ) %>%
-  mutate(pitches = map(pitches, compmus_normalise, "clr")) %>%
-  mutate_at(vars(pitches, timbre), map, bind_rows) %>%
-  unnest(cols = c(pitches, timbre))
+data <- albums %>%
+  mutate(date = strtoi(substr(track.album.release_date, 1, 4)))
 
-total_juice <-
-  recipe(
-    track.name ~
-      danceability +
-      energy +
-      loudness +
-      speechiness +
-      acousticness +
-      instrumentalness +
-      valence +
-      tempo +
-      duration +
-      c01 + c02 + c03 + c04 + c05 + c06 +
-      c07 + c08 + c09 + c10 + c11 + c12,
-    data = total
-  ) %>%
-  step_center(all_predictors()) %>%
-  step_scale(all_predictors()) %>% 
-  # step_range(all_predictors()) %>% 
-  prep(total %>% mutate(track.name = str_trunc(track.name, 20))) %>%
-  juice() %>%
-  column_to_rownames("track.name")
+plot <- ggplot(data, aes(x = date, y = track.popularity, label = track.name)) +
+  geom_smooth() +
+  theme_classic() +
+  labs(title="The popularity of Tyler, the Creator over time.", x="", y="Popularity")
 
-total_dist <- dist(total_juice, method = "euclidean")
-
-final <-  total_dist %>% 
-  hclust(method = "complete") # Try single, average, and complete.
-
-
-
-colors = c("purple", "black")
-clus4 = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,2, 2,2, 2,2, 2,2, 2)
-plot(as.phylo(final), type = "fan", tip.color = colors[clus4],
-     label.offset = 0.5, cex = 0.5)
-
+ggplotly(plot)
 ```
 
 ***
 
-An interesting question within music is always: What causes certain songs on a album to be a apart of that album? What is the coherence of tracks within an album? I tried to analyze this for the albums of IGOR and Goblin, two very conflicting albums on all fronts. I found it interesting to investigate whether the coherence within these albums and the difference between the tracks of differing albums would be great enough so that two separate clusters would form. To investigate this, I created a dendrogram which uses the track level features of timbre, danceability, energy, loudness, speechiness, acousticness, instrumentalness, valence, tempo and duration to see if these clusters would form. The result can be seen on the left with tracks from IGOR shown in black and tracks from Goblin shown in pink.
-
-Interestingly, we do notice that most of the tracks from Goblin are indeed in the same cluster, with the same holding true for the tracks of IGOR. We do notice some outliers: Some tracks of Goblin are deeply rooted in the IGOR cluster, and the, at this point all to familiar, track "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING" residing in its entirely own cluster. Listening to the Goblin tracks that appear in the IGOR cluster, it is not entirely clear why these appear there: They are very repetitive which is in contrast with most tracks in IGOR. Maybe repetitiveness is not picked up by these track-level features. Besides that, it is not surprising that the aforementioned track resides in its own cluster. This reason for this, is the same reason that its an outlier in many other plots: It is very short, with almost no instrumentals. 
-
-All in all, these features used lead to quite successful clustering of the two albums which means they form their own seperate entities. I suspect that this also applies for different pairs of albums and that all albums of Tyler form entities of their own, that can be successfully distinguished using track-level features. Unfortunately, we can not conclude this with certainty as this experiment does not really have external validity. It does given an indication though.
-
-
-### Introduction
-
-Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What parameters most prominently changed in the albums of Tyler, The Creator over time?
+Tyler, the Creator is an American rapper and record producer which has a fascinating artistic evolution. His first few albums were characterized by vulgar lyrics and gritty beats. This caused him some trouble, being accused of homophobia and misogyny. This didn't seem to stop him, as he kept releasing albums every 2 years. These albums do show an interesting evolution. He stepped away from the dark themes known in his earlier albums and started to show a more sensitive side. His instrumentals became more slow and soul-like and his lyrics more happy. This evolution also came with an increase in popularity, as can be seen on the left. Besides this, I find this contrast very interesting and I wonder if this is represented by the data given by Spotify API. My corpus will therefore be about the evolution of the albums released by Tyler, the Creator. I want to specifically focus on which parameters changed in the evolution of Tyler's discography. The main research question is: What parameters most prominently changed in the albums of Tyler, The Creator over time?
 
 The natural points of comparison will therefore be the albums of Tyler, the Creator. As said, I expect the earlier albums to show more 'dark' instrumentals with more spoken word. I expect that later albums will show more diverse instrumentals and more singing. I am not quite sure if and how this will exactly translate to the different parameters that Spotify can measure, but this will make the corpus more interesting. Besides that, I am unsure if the trend towards more soul-like and instrumental heavy songs will continue with his last album, CALL ME IF YOU GET LOST, as this also contains more rap and trap-like beats and how this will show up in the data.
 
-Luckily, the tracks in my corpus are very representative for the groups I want to compare as they all belong to the groups. I will be comparing the tracks in the albums and the groups I want to compare are the albums. It doesn't get very much more representative than that. Luckily, all his albums are on Spotify so no groups are left out. Besides that, I will exclude leaked songs, which are not on Spotify, from my research. The limitations of my corpus is that my observation of his evolution is subjective and might no be represented in the data. However, this would also be an interesting result.
+Luckily, the tracks in my corpus are very representative for the groups I want to compare as they all belong to the groups. I will be comparing the tracks in the albums and the groups I want to compare are the albums. It doesn't get very much more representative than that. Luckily, all his albums are on Spotify so no groups are left out. Besides that, I will exclude leaked songs, which are not on Spotify, from my research. The limitations of my corpus is that my observation of his evolution is subjective and might not be represented in the data. However, this would also be an interesting result.
 
-The discography of Tyler do contain some atypical tracks / albums. As I said, CMIFYGL is an outlier in the evolution of his albums in my opinion. Some tracks in the more soul-like, melancholic albums also contain more heavy-beats and can form outliers in the data. Like the hard-hitting "WHAT'S GOOD" on the breakup album IGOR or "I Ain't Got Time!" on the happy Flower Boy. However, these tracks are still more 'fleshed-out' in my opinion than the tracks on the earlier albums. So it will be interesting to see how these outliers influence the final corpus.
+The discography of Tyler does contain some atypical tracks / albums. As I said, CMIFYGL is an outlier in the evolution of his albums in my opinion. Some tracks in the more soul-like, melancholic albums also contain more heavy-beats and can form outliers in the data. Like the hard-hitting "WHAT'S GOOD" on the breakup album IGOR or "I Ain't Got Time!" on the happy Flower Boy. However, these tracks are still more 'fleshed-out' in my opinion than the tracks on the earlier albums. So it will be interesting to see how these outliers influence the final corpus.
 
 ### How did the **valence** of the **different albums** evolve over time?
 
@@ -232,9 +185,12 @@ grid.arrange(plot1, plot2, ncol=2)
 
 ***
 
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/3WQlJpaUUbGtUqAskvGA7c?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5hVghJ4KaYES3BFUATCYn0?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+
 Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
 
-This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a gritty, controversial song released in 2011 which garnered Tyler a lot of attention. Itset the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
+This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a gritty, controversial song released in 2011 which garnered Tyler a lot of attention. It set the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
 
 This is reflected in the two plots, on the left we notice that the plot for Yonkers shows much repetition indicated by the squares with lower distances. Besides that, there is a certain regularity in its distances as indicated by the horizontal and vertical lines which are equally spaced. On the right, we notice the contrary, there is no such order in its distances with high irregularities around the 100 second mark, this is caused by a guest verse. All in all, the plot seems more chaotic.
 
@@ -324,7 +280,11 @@ grid.arrange(plot1, plot2, ncol=2)
 
 ***
 
-We will now compare two rap songs of Tyler when it comes to the timbre-based self-similarity matrix. To elaborate, timbre is the attribute of sound which causes us to be able to differentiate between two sounds with the same pitch. The matrix used, says something about how points in time compare when it comes to timbre to other points in time within the same song. Just like in the previous plots, a dark shade of blue means that the timbre-based features are more similar than when the color is a lighter shade of green. My hope is that, using this matrix, we can analyse if Tyler uses a more varied arsenal of sounds in his songs. We will therefore look at the rap songs "SMUCKERS", released in 2015, to "WUSYANAME", release in 2021. 
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/3v6SdZsS8zR6Go257tldbB?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5B0kgjHULYJhAQkK5XsMoC?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+
+We will now compare two rap songs of Tyler when it comes to the timbre-based self-similarity matrix. To elaborate, timbre is the attribute of sound which causes us to be able to differentiate between two sounds with the same pitch. The matrix used, says something about how points in time compare when it comes to timbre to other points in time within the same song. Just like in the previous plots, a dark shade of blue means that the timbre-based features are more similar than when the color is a lighter shade of green. My hope is that, using this matrix, we can analyse if Tyler uses a more varied arsenal of sounds in his songs. We will therefore look at the rap songs "SMUCKERS", released in 2015, to "WUSYANAME", released in 2021. 
 
 We can immediately tell from the plot that 4 squares of high similarity form in the "SMUCKERS" subplot. This tells us that within these squares, the song 'sounds' the same. At around the 3 minute mark, the song repeats the basic melody that is played at the beginning of the song with almost no vocals, which explains the vertical and horizontal lines at these times. With "WUSYNAME", there is almost no pattern to be spotted. There are some vague lines which correspond to the moments in the song where the instrumentals are dropped to put focus on a vocal. However, unlike "SMUCKERS", there seems to be no overall pattern.
 
@@ -361,7 +321,7 @@ Next, we will look at the Spotify API track feature of loudness. It is described
 
 Looking at the graph, we can conclude that the loudness of the albums over time seems to show a periodic wave-like pattern. With his first album, we can see a very high variance in loudness, with some outliers, and the lowest mean loudness of all albums. We then see an increase in mean loudness until Cherry Bomb, which is not surprising since this album is known for its high energy and hard hitting, rough instrumentals. We then see Tyler taking a step back with Flower Boy, where the spread in loudness as well as the mean seems to be decreasing again. This albums is characterized by instrumentals with a more happy and laid back sound, so this decrease is not surprising. It then rises again with IGOR, which has the same low outlier as found in the valence plot. This track is an outlier for the same reason it is an outlier in the valence plot; this track has almost no instrumentals and is just someone saying a certain sentence. With his last album we see Tyler returning to high energy / loud tracks with a mean which is roughly the same as Cherry Bomb. When listening to the album, one can understand why: It has the same hard hitting beats which early-Tyler is known for.
 
-Overall, the loudness in Tylers albums seems to be increasing again but shows some periodic behavior. Extrapolating, It would therefore be safe to assume that the next album of Tyler has a high chance of being less loud.
+Overall, the loudness in Tylers albums seems to be increasing again but shows some periodic behavior. When extrapolating, it would therefore be safe to assume that the next album of Tyler has a high chance of being less loud.
 
 ### How did the **tempo distributions** of the albums **change**?
 
@@ -403,10 +363,81 @@ Having discussed valence, chroma, timbre and loudness, a logical variable to dis
 
 From the plot, we can immediately tell that Tyler had a preference to make songs with a tempo of around 80 BPM. However, this preference seems to have disappeared for his latest album, with most songs being around 138 BPM. Also, the strength of this preference has decreased over time with less songs falling within the largest bin. Besides that, we can see that the tempo of the songs on the first four albums of Tyler seem to be more clustered. Again, this disappeared with his latest two albums, where we can see that the tempi are more spread out.
 
-We can, therefore, conclude that the tempo distribution seem to have changed in the sense that it seems to be getting less clustered over time with a less 'central' preference. The reason for this could be that as Tyler got more comfortable making instrumentals, he started experimenting more and more with different tempi. I expect, that for Tyler's next album he will also use a diverse set of tempi as Tyler has been seeing a lot of success with his latest few albums, which coincidentally, have a diverse set of tempi.
+We can, therefore, conclude that the tempo distribution seems to have changed in the sense that it seems to be getting less clustered over time with a less 'central' preference. The reason for this could be that as Tyler got more comfortable making instrumentals, he started experimenting more and more with different tempi. I expect, that for Tyler's next album he will also use a diverse set of tempi as Tyler has been seeing a lot of success with his latest few albums, which coincidentally, have a diverse set of tempi.
+
+### Which **features** result in the succesful **clustering** of the albums **IGOR** and **Goblin**? 
+
+```{r cluster, echo=FALSE}
+total <-
+  get_playlist_audio_features("bnfcollection", "4eTwQdG9Xi7RFBl6fAhkci") %>%
+  add_audio_analysis() %>%
+  mutate(
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  ) %>%
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) %>%
+  mutate_at(vars(pitches, timbre), map, bind_rows) %>%
+  unnest(cols = c(pitches, timbre))
+
+total_juice <-
+  recipe(
+    track.name ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      valence +
+      tempo +
+      duration +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = total
+  ) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors()) %>% 
+  # step_range(all_predictors()) %>% 
+  prep(total %>% mutate(track.name = str_trunc(track.name, 20))) %>%
+  juice() %>%
+  column_to_rownames("track.name")
+
+total_dist <- dist(total_juice, method = "euclidean")
+
+final <-  total_dist %>% 
+  hclust(method = "complete") # Try single, average, and complete.
+
+
+
+colors = c("purple", "black")
+clus4 = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,2, 2,2, 2,2, 2,2, 2)
+plot(as.phylo(final), type = "fan", tip.color = colors[clus4],
+     label.offset = 0.5, cex = 0.5)
+
+```
+
+***
+
+An interesting question within music is always: What causes certain songs on a album to be a apart of that album? What is the coherence of tracks within an album? I tried to analyze this for the albums of IGOR and Goblin, two very conflicting albums on all fronts. I found it interesting to investigate whether the coherence within these albums and the difference between the tracks of differing albums would be great enough so that two separate clusters would form. To investigate this, I created a dendrogram which uses the track level features of timbre, danceability, energy, loudness, speechiness, acousticness, instrumentalness, valence, tempo and duration to see if these clusters would form. The result can be seen on the left with tracks from IGOR shown in black and tracks from Goblin shown in pink.
+
+Interestingly, we do notice that most of the tracks from Goblin are indeed in the same cluster, with the same holding true for the tracks of IGOR. We do notice some outliers: Some tracks of Goblin are deeply rooted in the IGOR cluster, and the, at this point all to familiar, track "EXACTLY WHAT YOU RUN FROM YOU END UP CHASING" residing in its entirely own cluster. Listening to the Goblin tracks that appear in the IGOR cluster, it is not entirely clear why these appear there: They are very repetitive which is in contrast with most tracks in IGOR. Maybe repetitiveness is not picked up by these track-level features. Besides that, it is not surprising that the aforementioned track resides in its own cluster. This reason for this, is the same reason that its an outlier in many other plots: It is very short, with almost no instrumentals. 
+
+All in all, these features used lead to quite successful clustering of the two albums which means they form their own separate entities. I suspect that this also applies for different pairs of albums and that all albums of Tyler form entities of their own, that can be successfully distinguished using track-level features. Unfortunately, we can not conclude this with certainty as this experiment does not really have external validity. It does given an indication though.
 
 
 ### Conclusion
-From the research done so far, we can definitely say that the overall valence of the albums is increasing over time. Besides that, the musical variety of the songs seems to show the same behavior. This means that, from a computational musicology sense, that Tyler's music is becoming more happier in tone as well as more varied.
+From the research done so far, we can definitely say that almost all discussed parameters have changed significantly over time. Firstly, we can conclude that the overall valence of the albums is increasing over time. Besides that, the musical variety of the songs when it comes to timbre and chroma seems to show the same behavior. This means that, from a computational musicology sense, that Tyler's music is becoming more happier in tone as well as more varied. Besides that, we looked at the loudness of each album of Tyler, here we saw that this parameter showed cyclic behavior. Then we looked at the distribution of tempi in each of Tyler's albums. We saw there that the tempo distribution of the albums have been getting less clustered over time with a less 'central' preference. Lastly, we tried clustering two albums of Tyler. We were very successful in doing which gave an indication that each album of Tyler forms their own 'entity'.
 
-For now, what can we say about the future of Tyler's music? If we would simply extrapolate our data, then we could say that the overall valence and musical variety of Tyler's new album would even be higher. However, it is never that simple. Because, at the end of the day, Tyler will simply create whatever he thinks sounds good at the time, which is influenced by factors which we simply can't measure. It could be very much the case that a higher valence and musical variety is not what Tyler is looking for in his next album. However, we can say that with all the experience that Tyler has acquired in his journey that it will definitely be worth listening to.
+This, of course, begs the question: Who could these conclusions benefit, and how? Well, too be honest, this is hard too say. This is because in this portfolio, we really only looked at one artist. Every artists is different and to say that Tyler's evolution is more important would not necessarily be true. So, I would say that no one *really* benefits from these conclusions. But, this does not take away that its interesting to see that the observed evolution of an artist corresponds with the evolution we found in the data.
+
+All in all, what can we say about a possible future album of Tyler? If we would simply extrapolate our data, then we could say that the overall valence and musical variety (in chroma, tempo and timbre) of Tyler's new album would even be higher, with a lower overall loudness. However, it is never that simple. Because, at the end of the day, Tyler will simply create whatever he thinks sounds good at that time, which is influenced by factors which we simply can't measure. It could be very much the case that a higher valence and musical variety or lower loudness is not what Tyler is looking for in his next album. However, we can say that with all the experience that Tyler has acquired in his journey so far, that it will definitely be worth listening to.
