@@ -185,9 +185,6 @@ grid.arrange(plot1, plot2, ncol=2)
 
 ***
 
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/3WQlJpaUUbGtUqAskvGA7c?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5hVghJ4KaYES3BFUATCYn0?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-
 Next, we will look at an old and new hit song of Tyler to see how they compare when plotting the distances of the chroma vectors of the same song but at different times. This plot says something about how points in time compare musically to other points in time within the same song. When two parts are vary similar, the distance becomes lower which is indicated by a dark shade of blue in this plot. When two parts are very different, it is indicated by a shade of green. The diagonal line in both plots is logical; the distance in chroma vectors between the same moments in the song is zero.
 
 This plot can tell us something about repeating patterns and overall similarity within a song, which in turns says something about the musical variety within a song. To say something about the musical evolution of Tyler, I wanted to compare two representative songs from two different ages of Tyler's discography. First off, there is Yonkers: This is a gritty, controversial song released in 2011 which garnered Tyler a lot of attention. It set the tone for the album in which it is featured, Goblin. Now compare this to EARFQUAKE, released in May 2019. This is Tyler's biggest hit to date with more than 550 million streams on Spotify. It is a song about a breakup, in which Tyler's showcases a varied instrumental.
@@ -279,10 +276,6 @@ grid.arrange(plot1, plot2, ncol=2)
 ```
 
 ***
-
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/3v6SdZsS8zR6Go257tldbB?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5B0kgjHULYJhAQkK5XsMoC?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
 
 We will now compare two rap songs of Tyler when it comes to the timbre-based self-similarity matrix. To elaborate, timbre is the attribute of sound which causes us to be able to differentiate between two sounds with the same pitch. The matrix used, says something about how points in time compare when it comes to timbre to other points in time within the same song. Just like in the previous plots, a dark shade of blue means that the timbre-based features are more similar than when the color is a lighter shade of green. My hope is that, using this matrix, we can analyse if Tyler uses a more varied arsenal of sounds in his songs. We will therefore look at the rap songs "SMUCKERS", released in 2015, to "WUSYANAME", released in 2021. 
 
